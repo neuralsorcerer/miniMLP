@@ -37,6 +37,18 @@ class MLP:
             return ActivationFunction.leaky_relu(x)
         elif self.activation == 'elu':
             return ActivationFunction.elu(x)
+        elif self.activation == 'gelu':
+            return ActivationFunction.gelu(x)
+        elif self.activation == 'softplus':
+            return ActivationFunction.softplus(x)
+        elif self.activation == 'selu':
+            return ActivationFunction.selu(x)
+        elif self.activation == 'prelu':
+            return ActivationFunction.prelu(x)
+        elif self.activation == 'swish':
+            return ActivationFunction.swish(x)
+        elif self.activation == 'gaussian':
+            return ActivationFunction.gaussian(x)
         else:
             raise ValueError('Invalid Activation Function')
 
