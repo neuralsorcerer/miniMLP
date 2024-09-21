@@ -7,7 +7,7 @@ setuptools.setup(
     name="miniMLP",
     version="0.0.1",
     author="Soumyadip Sarkar",
-    author_email="soumyadipsarkar@outlook.com",
+    author_email="soumyadip@soumyadipsarkar.in",
     description="Implementation of very small scale Neural Network from scratch.",
     long_description=long_description,
     long_description_content_type="text/markdown",
