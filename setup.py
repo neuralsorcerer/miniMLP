@@ -11,7 +11,7 @@ setuptools.setup(
     description="Implementation of very small scale Neural Network from scratch.",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/papaaannn/miniMLP",
+    url="https://github.com/neuralsorcerer/miniMLP",
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",

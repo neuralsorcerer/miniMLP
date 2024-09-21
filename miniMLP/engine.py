@@ -1,119 +1,115 @@
 import numpy as np
-from miniMLP.activation import ActivationFunction
+from miniMLP.layers import Layer
+from miniMLP.losses import LossFunction
+from miniMLP.optimizers import Optimizer
 
 class MLP:
-    def __init__(self, input_size, output_size, hidden_layers=1, hidden_sizes=[1], activation='sigmoid'):
-        self.input_size = input_size
-        self.output_size = output_size
-        self.hidden_layers = hidden_layers
-        self.hidden_sizes = hidden_sizes
-        self.activation = activation
-        self.weights = []
-        self.biases = []
+    """Multilayer Perceptron neural network."""
+    
+    def __init__(self, layers: list[Layer], loss_function: LossFunction, optimizer: Optimizer):
+        """
+        Initialize the MLP with layers, loss function, and optimizer.
+        
+        Args:
+            layers: List of Layer objects (each fully connected layer).
+            loss_function: The loss function object to calculate the error.
+            optimizer: The optimizer object for updating weights and biases.
+        """
+        self.layers = layers
+        self.loss_function = loss_function
+        self.optimizer = optimizer
 
-        # Initialize weights and biases for input to first hidden layer
-        self.weights.append(np.random.randn(input_size, hidden_sizes[0]))
-        self.biases.append(np.zeros((1, hidden_sizes[0])))
+    def forward(self, X: np.ndarray) -> np.ndarray:
+        """Forward propagation through all layers."""
+        for layer in self.layers:
+            X = layer.forward(X, training=True)  # Enable training flag for dropout, etc.
+        return X
 
-        # Initialize weights and biases for the rest of the hidden layers
-        for i in range(hidden_layers - 1):
-            self.weights.append(np.random.randn(hidden_sizes[i], hidden_sizes[i+1]))
-            self.biases.append(np.zeros((1, hidden_sizes[i+1])))
+    def backward(self, dA: np.ndarray) -> None:
+        """Backpropagate error through all layers."""
+        for layer in reversed(self.layers):
+            dA = layer.backward(dA)  # No need for learning_rate here; handled by optimizer
 
-        # Initialize weights and biases for last hidden layer to output layer
-        self.weights.append(np.random.randn(hidden_sizes[-1], output_size))
-        self.biases.append(np.zeros((1, output_size)))
-
-    def activation_func(self, x):
-        if self.activation == 'sigmoid':
-            return ActivationFunction.sigmoid(x)
-        elif self.activation == 'relu':
-            return ActivationFunction.relu(x)
-        elif self.activation == 'tanh':
-            return ActivationFunction.tanh(x)
-        elif self.activation == 'softmax':
-            return ActivationFunction.softmax(x)
-        elif self.activation == 'leaky_relu':
-            return ActivationFunction.leaky_relu(x)
-        elif self.activation == 'elu':
-            return ActivationFunction.elu(x)
-        elif self.activation == 'gelu':
-            return ActivationFunction.gelu(x)
-        elif self.activation == 'softplus':
-            return ActivationFunction.softplus(x)
-        elif self.activation == 'selu':
-            return ActivationFunction.selu(x)
-        elif self.activation == 'prelu':
-            return ActivationFunction.prelu(x)
-        elif self.activation == 'swish':
-            return ActivationFunction.swish(x)
-        elif self.activation == 'gaussian':
-            return ActivationFunction.gaussian(x)
-        else:
-            raise ValueError('Invalid Activation Function')
-
-    def forward(self, X):
-        A = [X]
-
-        # Compute activation for each hidden layer
-        for i in range(len(self.weights)):
-            Z = np.dot(A[i], self.weights[i]) + self.biases[i]
-            A.append(self.activation_func(Z))
-
-        return A[-1]
-
-    def train(self, X, Y, learning_rate=0.01, epochs=100, optimizer='SGD', beta1=0.9, beta2=0.999, epsilon=1e-8):
-        # Define optimizer-specific variables
-        if optimizer == 'Momentum':
-            velocities = [np.zeros_like(w) for w in self.weights]
-            gamma = 0.9
-        elif optimizer == 'Adam':
-            m = [np.zeros_like(w) for w in self.weights]
-            v = [np.zeros_like(w) for w in self.weights]
-        else:
-            if optimizer != 'SGD':
-                raise ValueError('Invalid Optimizer')
+    def train(self, X_train: np.ndarray, Y_train: np.ndarray, 
+              X_val: np.ndarray = None, Y_val: np.ndarray = None,
+              epochs: int = 100, batch_size: int = 32, learning_rate: float = 0.01,
+              validation: bool = False, verbose: bool = True) -> dict:
+        """
+        Train the MLP with the given training data.
+        
+        Args:
+            X_train: Training data (features).
+            Y_train: Training labels (targets).
+            X_val: Validation data (features).
+            Y_val: Validation labels (targets).
+            epochs: Number of training epochs.
+            batch_size: Size of mini-batches.
+            learning_rate: Initial learning rate for the optimizer.
+            validation: If True, perform validation after each epoch.
+            verbose: If True, print the loss at each epoch.
+            
+        Returns:
+            A dictionary with training and validation losses (if validation is enabled).
+        """
+        history = {'train_loss': [], 'val_loss': []}
+        num_batches = X_train.shape[0] // batch_size
 
         for epoch in range(epochs):
-            # Forward propagation
-            A = [X]
-            Z_list = []
+            epoch_loss = 0
+            
+            # Shuffle the training data at the start of each epoch
+            indices = np.random.permutation(X_train.shape[0])
+            X_train_shuffled = X_train[indices]
+            Y_train_shuffled = Y_train[indices]
+            
+            # Mini-batch training
+            for batch in range(num_batches):
+                X_batch = X_train_shuffled[batch * batch_size:(batch + 1) * batch_size]
+                Y_batch = Y_train_shuffled[batch * batch_size:(batch + 1) * batch_size]
 
-            # Compute activation for each hidden layer
-            for i in range(len(self.weights)):
-                Z = np.dot(A[i], self.weights[i]) + self.biases[i]
-                Z_list.append(Z)
-                A.append(self.activation_func(Z))
+                # Forward pass
+                Y_pred = self.forward(X_batch)
 
-            # Compute error for output layer
-            error = Y - A[-1]
-            loss = np.mean(error ** 2)
-            print(f"Epoch {epoch}: loss = {loss}")
+                # Compute the loss
+                loss = self.loss_function.compute_loss(Y_batch, Y_pred)
+                epoch_loss += loss
 
-            dA = [error]
+                # Backward pass
+                dA = self.loss_function.compute_gradient(Y_batch, Y_pred)
+                self.backward(dA)
 
-            # Backpropagation
-            for i in range(len(self.weights) - 1, -1, -1):
-                dZ = dA[-1] * (self.activation_func(Z_list[i]) * (1 - self.activation_func(Z_list[i])))
-                dA.append(np.dot(dZ, self.weights[i].T))
+                # Update weights and biases using the optimizer
+                for layer in self.layers:
+                    self.optimizer.update(layer.weights, layer.biases, layer.grads)
 
-                # Compute gradients using chosen optimizer
-                if optimizer == 'SGD':
-                    self.weights[i] += learning_rate * np.dot(A[i].T, dZ)
-                    self.biases[i] += learning_rate * np.sum(dZ, axis=0)
-                elif optimizer == 'Momentum':
-                    velocities[i] = gamma * velocities[i] + learning_rate * np.dot(A[i].T, dZ)
-                    self.weights[i] += velocities[i]
-                    self.biases[i] += learning_rate * np.sum(dZ, axis=0)
-                elif optimizer == 'Adam':
-                    m[i] = beta1 * m[i] + (1 - beta1) * np.dot(A[i].T, dZ)
-                    v[i] = beta2 * v[i] + (1 - beta2) * np.dot(A[i].T, dZ) ** 2
-                    m_hat = m[i] / (1 - beta1 ** (epoch + 1))
-                    v_hat = v[i] / (1 - beta2 ** (epoch + 1))
-                    self.weights[i] += learning_rate * m_hat / (np.sqrt(v_hat) + epsilon)
-                    self.biases[i] += learning_rate * np.sum(dZ, axis=0)
+            # Average loss per batch
+            avg_loss = epoch_loss / num_batches
+            history['train_loss'].append(avg_loss)
 
-        return self.weights, self.biases
+            if verbose:
+                print(f"Epoch {epoch + 1}/{epochs}, Training Loss: {avg_loss:.4f}")
 
-    def predict(self, X):
-        return self.forward(X)
+            # Validation (if enabled)
+            if validation and X_val is not None and Y_val is not None:
+                Y_val_pred = self.forward(X_val)
+                val_loss = self.loss_function.compute_loss(Y_val, Y_val_pred)
+                history['val_loss'].append(val_loss)
+                
+                if verbose:
+                    print(f"Epoch {epoch + 1}/{epochs}, Validation Loss: {val_loss:.4f}")
+
+        return history
+
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        """
+        Make predictions with the trained model.
+        
+        Args:
+            X: Input data for prediction.
+        
+        Returns:
+            Predicted values.
+        """
+        for layer in self.layers:
+            X = layer.forward(X, training=False)  # Disable training flag for dropout, etc.
+        return X

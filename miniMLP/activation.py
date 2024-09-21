@@ -1,46 +1,66 @@
 import numpy as np
 
 class ActivationFunction:
+    """Collection of common activation functions used in neural networks."""
 
-    def sigmoid(x):
+    @staticmethod
+    def sigmoid(x: np.ndarray) -> np.ndarray:
+        """Sigmoid activation function."""
         return 1 / (1 + np.exp(-x))
 
-    def relu(x):
+    @staticmethod
+    def relu(x: np.ndarray) -> np.ndarray:
+        """ReLU activation function."""
         return np.maximum(0, x)
     
-    def tanh(x):
+    @staticmethod
+    def tanh(x: np.ndarray) -> np.ndarray:
+        """Tanh activation function."""
         return np.tanh(x)
 
-    def softmax(x):
+    @staticmethod
+    def softmax(x: np.ndarray) -> np.ndarray:
+        """Softmax activation function."""
         exps = np.exp(x - np.max(x, axis=1, keepdims=True))
         return exps / np.sum(exps, axis=1, keepdims=True)
     
-    def leaky_relu(x, alpha=0.01):
+    @staticmethod
+    def leaky_relu(x: np.ndarray, alpha: float = 0.01) -> np.ndarray:
+        """Leaky ReLU activation function."""
         return np.maximum(alpha * x, x)
     
-    def elu(x, alpha=1.0):
+    @staticmethod
+    def elu(x: np.ndarray, alpha: float = 1.0) -> np.ndarray:
+        """ELU activation function."""
         return np.where(x > 0, x, alpha * (np.exp(x) - 1))
     
-    def gelu(x):
+    @staticmethod
+    def gelu(x: np.ndarray) -> np.ndarray:
+        """GELU activation function."""
         cdf = 0.5 * (1.0 + np.tanh((np.sqrt(2 / np.pi) * (x + 0.044715 * np.power(x, 3)))))
         return x * cdf
 
-    def softplus(x):
+    @staticmethod
+    def softplus(x: np.ndarray) -> np.ndarray:
+        """Softplus activation function."""
         return np.log(1 + np.exp(x))
 
-    def selu(x, alpha=1.67326, scale=1.0507):
-        mask = (x > 0)
-        out = scale * (mask * x + (1 - mask) * alpha * (np.exp(x) - 1))
-        return out
+    @staticmethod
+    def selu(x: np.ndarray, alpha: float = 1.67326, scale: float = 1.0507) -> np.ndarray:
+        """SELU activation function."""
+        return scale * np.where(x > 0, x, alpha * (np.exp(x) - 1))
 
-    def prelu(x, alpha=0.01):
+    @staticmethod
+    def prelu(x: np.ndarray, alpha: float = 0.01) -> np.ndarray:
+        """PReLU activation function."""
         return np.maximum(alpha * x, x)
 
-    def swish(x):
+    @staticmethod
+    def swish(x: np.ndarray) -> np.ndarray:
+        """Swish activation function."""
         return x * ActivationFunction.sigmoid(x)
 
-    def gaussian(x, mu=0, sigma=1):
+    @staticmethod
+    def gaussian(x: np.ndarray, mu: float = 0, sigma: float = 1) -> np.ndarray:
+        """Gaussian activation function."""
         return np.exp(-(x - mu) ** 2 / (2 * sigma ** 2))
-
-
-
