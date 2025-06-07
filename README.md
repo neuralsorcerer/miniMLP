@@ -40,6 +40,9 @@ Install them via pip:
 - **Gradient Clipping**: Prevent exploding gradients during training.
 - **Model Summary**: Display a summary of layer shapes and parameter counts.
 - **L1/L2 Regularization**: Encourage sparse or small weights.
+- **Weight Initialization**: Choose He or Xavier initialization per layer.
+- **Weight Introspection**: Easily get and set model weights.
+- **Class Prediction Helper**: `predict_classes` converts outputs to labels.
 
 ## Example Usage
 
@@ -59,7 +62,7 @@ activation functions, and optimizer:
     # Example MLP Architecture
     layers = [
         Layer(input_size=2, output_size=4, activation=ActivationFunction.relu),
-        Layer(input_size=4, output_size=6, activation=ActivationFunction.relu),
+        Layer(input_size=4, output_size=6, activation=ActivationFunction.relu, init='xavier'),
         Layer(input_size=6, output_size=1, activation=ActivationFunction.sigmoid)
     ]
 
@@ -106,6 +109,8 @@ After training, use the **`predict`** method to generate predictions for new dat
     X_new = np.array([[1, 1], [0, 0]])
     y_pred = mlp.predict(X_new)
     print(y_pred)
+    y_labels = mlp.predict_classes(X_new)
+    print(y_labels)
     ```
 
 ### Evaluating, Saving, and Loading
@@ -118,6 +123,9 @@ After training, use the **`predict`** method to generate predictions for new dat
     # Save and later load the weights
     mlp.save("model.pkl")
     mlp.load("model.pkl")
+    # Access raw weights
+    weights = mlp.get_weights()
+    mlp.set_weights(weights)
     ```
 
 ## Activation Functions

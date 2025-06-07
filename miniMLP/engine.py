@@ -154,6 +154,13 @@ class MLP:
             X = layer.forward(X, training=False)  # Disable training flag for dropout, etc.
         return X
     
+    def predict_classes(self, X: np.ndarray) -> np.ndarray:
+        """Return discrete class predictions."""
+        Y_pred = self.predict(X)
+        if Y_pred.shape[1] == 1:
+            return (Y_pred > 0.5).astype(int)
+        return np.argmax(Y_pred, axis=1)
+
     def evaluate(self, X: np.ndarray, Y: np.ndarray) -> tuple[float, float]:
         """Compute loss and accuracy on a dataset."""
         Y_pred = self.predict(X)
@@ -166,6 +173,16 @@ class MLP:
             labels = np.argmax(Y, axis=1)
             accuracy = np.mean(preds == labels)
         return loss, accuracy
+
+    def get_weights(self):
+        """Return a copy of model weights and biases for all layers."""
+        return [(layer.weights.copy(), layer.biases.copy()) for layer in self.layers]
+
+    def set_weights(self, weights):
+        """Set model weights and biases from a list of tuples."""
+        for layer, (w, b) in zip(self.layers, weights):
+            layer.weights = w.copy()
+            layer.biases = b.copy()
 
     def save(self, filepath: str) -> None:
         """Save model weights to a file using pickle."""

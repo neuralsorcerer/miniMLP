@@ -9,7 +9,8 @@ class Layer:
     def __init__(self, input_size: int, output_size: int, activation: Callable,
                  activation_derivative: Optional[Callable] = None,
                  regularizer: Optional[L2Regularizer] = None,
-                 dropout_rate: float = 0.0):
+                 dropout_rate: float = 0.0,
+                 init: str = "he"):
         """Initialize layer parameters.
         
         Args:
@@ -21,6 +22,7 @@ class Layer:
                 :class:`ActivationFunction`.
             regularizer: Optional regularizer to apply to the weights.
             dropout_rate: Probability of dropping a unit during training.
+            init: Weight initialization method ("he" or "xavier").
         """
         self.input_size = input_size
         self.output_size = output_size
@@ -33,7 +35,13 @@ class Layer:
         self.activation_derivative = activation_derivative
 
         # Parameters
-        self.weights = np.random.randn(input_size, output_size) * np.sqrt(2.0 / input_size)
+        if init == "he":
+            scale = np.sqrt(2.0 / input_size)
+        elif init == "xavier":
+            scale = np.sqrt(1.0 / (input_size + output_size))
+        else:
+            scale = 0.01
+        self.weights = np.random.randn(input_size, output_size) * scale
         self.biases = np.zeros((1, output_size))
         self.regularizer = regularizer
         self.dropout_rate = dropout_rate

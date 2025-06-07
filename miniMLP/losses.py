@@ -40,7 +40,8 @@ class CrossEntropy(LossFunction):
 
     def compute_gradient(self, Y_true: np.ndarray, Y_pred: np.ndarray) -> np.ndarray:
         """Compute the gradient of the Cross Entropy loss."""
-        return -(Y_true / (Y_pred + 1e-8))
+        m = Y_pred.shape[0]
+        return -(Y_true / (Y_pred + 1e-8)) / m
 
 class BinaryCrossEntropy(LossFunction):
     """Binary Cross Entropy loss"""
@@ -50,7 +51,8 @@ class BinaryCrossEntropy(LossFunction):
 
     def compute_gradient(self, Y_true: np.ndarray, Y_pred: np.ndarray) -> np.ndarray:
         """Compute the gradient of the Binary Cross Entropy loss."""
-        return -(Y_true / (Y_pred + 1e-8)) + (1 - Y_true) / (1 - Y_pred + 1e-8)
+        m = Y_true.shape[0]
+        return (-(Y_true / (Y_pred + 1e-8)) + (1 - Y_true) / (1 - Y_pred + 1e-8)) / m
 
 class HingeLoss(LossFunction):
     """Hinge loss"""
@@ -63,7 +65,7 @@ class HingeLoss(LossFunction):
         grad = np.zeros_like(Y_pred)
         mask = Y_true * Y_pred < 1
         grad[mask] = -Y_true[mask]
-        return grad
+        return grad / Y_true.shape[0]
 
 class HuberLoss(LossFunction):
     """Huber loss"""
@@ -88,4 +90,4 @@ class HuberLoss(LossFunction):
         """Compute the gradient of the Huber loss."""
         error = Y_pred - Y_true
         is_small_error = np.abs(error) <= self.delta
-        return np.where(is_small_error, error, self.delta * np.sign(error))
+        return np.where(is_small_error, error, self.delta * np.sign(error)) / Y_true.shape[0]
