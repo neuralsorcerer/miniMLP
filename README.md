@@ -34,6 +34,12 @@ Install them via pip:
 - **Validation Support**: Monitor validation performance during training.
 - **Training History**: Track loss over epochs, useful for plotting and debugging.
 - **Learning Rate Scheduling**: Support for dynamic learning rates.
+- **Early Stopping**: Halt training when validation loss stops improving.
+- **Model Persistence**: Save and load network weights easily.
+- **Evaluation Metrics**: Quickly compute loss and accuracy on datasets.
+- **Gradient Clipping**: Prevent exploding gradients during training.
+- **Model Summary**: Display a summary of layer shapes and parameter counts.
+- **L1/L2 Regularization**: Encourage sparse or small weights.
 
 ## Example Usage
 
@@ -63,6 +69,9 @@ activation functions, and optimizer:
 
     # Initialize MLP
     mlp = MLP(layers=layers, loss_function=loss_fn, optimizer=optimizer)
+
+    # Display model architecture
+    mlp.summary()
     ```
 
 ### Training the MLP
@@ -74,8 +83,19 @@ number of epochs, batch size, and more.
     X_train = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
     y_train = np.array([[0], [1], [1], [0]])
 
+    def scheduler(epoch):
+        return 0.001 * (0.95 ** epoch)
+
     # Train the model
-    mlp.train(X_train, y_train, epochs=2000, batch_size=4)
+    mlp.train(
+        X_train, y_train,
+        epochs=2000, batch_size=4,
+        validation=False,
+        lr_scheduler=scheduler,
+        early_stopping=True,
+        patience=20,
+        clip_value=1.0,
+    )
     ```
 
 ### Making Predictions
@@ -86,6 +106,18 @@ After training, use the **`predict`** method to generate predictions for new dat
     X_new = np.array([[1, 1], [0, 0]])
     y_pred = mlp.predict(X_new)
     print(y_pred)
+    ```
+
+### Evaluating, Saving, and Loading
+
+    ```python
+    # Evaluate on a dataset
+    loss, acc = mlp.evaluate(X_train, y_train)
+    print("Loss", loss, "Accuracy", acc)
+
+    # Save and later load the weights
+    mlp.save("model.pkl")
+    mlp.load("model.pkl")
     ```
 
 ## Activation Functions
@@ -114,6 +146,13 @@ The following optimizers are supported:
 - RMSProp
 - Momentum
 - Nesterov Accelerated Gradient (NAG)
+
+## Regularizers
+
+Built-in regularization helpers:
+
+- **L2Regularizer** for weight decay
+- **L1Regularizer** for sparsity
 
 ## Loss Functions
 

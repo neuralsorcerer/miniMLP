@@ -14,6 +14,23 @@ class L2Regularizer:
     def __call__(self, weights: np.ndarray) -> np.ndarray:
         """Apply L2 regularization to the weights."""
         return self.alpha * weights
+    
+
+class L1Regularizer:
+    """L1 Regularization promoting sparsity."""
+
+    def __init__(self, alpha: float):
+        """Initialize the L1 regularizer.
+
+        Args:
+            alpha: Regularization strength.
+        """
+        self.alpha = alpha
+
+    def __call__(self, weights: np.ndarray) -> np.ndarray:
+        """Apply L1 regularization to the weights."""
+        return self.alpha * np.sign(weights)
+
 
 class Dropout:
     """Dropout regularization technique."""
