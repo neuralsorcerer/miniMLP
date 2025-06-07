@@ -1,7 +1,7 @@
 import numpy as np
 
 class ActivationFunction:
-    """Collection of common activation functions used in neural networks."""
+    """Collection of common activation functions used in neural networks and their derivatives."""
 
     @staticmethod
     def sigmoid(x: np.ndarray) -> np.ndarray:
@@ -64,3 +64,83 @@ class ActivationFunction:
     def gaussian(x: np.ndarray, mu: float = 0, sigma: float = 1) -> np.ndarray:
         """Gaussian activation function."""
         return np.exp(-(x - mu) ** 2 / (2 * sigma ** 2))
+    
+
+    @staticmethod
+    def sigmoid_derivative(x: np.ndarray) -> np.ndarray:
+        """Derivative of the sigmoid function."""
+        s = ActivationFunction.sigmoid(x)
+        return s * (1 - s)
+
+    @staticmethod
+    def relu_derivative(x: np.ndarray) -> np.ndarray:
+        """Derivative of the ReLU function."""
+        return (x > 0).astype(float)
+
+    @staticmethod
+    def tanh_derivative(x: np.ndarray) -> np.ndarray:
+        """Derivative of the tanh function."""
+        return 1 - np.tanh(x) ** 2
+
+    @staticmethod
+    def softmax_derivative(x: np.ndarray) -> np.ndarray:
+        """Approximate derivative of the softmax function (diagonal terms)."""
+        s = ActivationFunction.softmax(x)
+        return s * (1 - s)
+
+    @staticmethod
+    def leaky_relu_derivative(x: np.ndarray, alpha: float = 0.01) -> np.ndarray:
+        """Derivative of the Leaky ReLU function."""
+        dx = np.ones_like(x)
+        dx[x < 0] = alpha
+        return dx
+
+    @staticmethod
+    def elu_derivative(x: np.ndarray, alpha: float = 1.0) -> np.ndarray:
+        """Derivative of the ELU function."""
+        dx = np.ones_like(x)
+        dx[x <= 0] = alpha * np.exp(x[x <= 0])
+        return dx
+
+    @staticmethod
+    def gelu_derivative(x: np.ndarray) -> np.ndarray:
+        """Derivative of the GELU function (approximation)."""
+        tanh_out = np.tanh(
+            np.sqrt(2 / np.pi) * (x + 0.044715 * np.power(x, 3))
+        )
+        left = 0.5 * tanh_out + 0.5
+        right = (
+            0.5 * x * (1 - tanh_out ** 2) * np.sqrt(2 / np.pi) *
+            (1 + 0.134145 * np.power(x, 2))
+        )
+        return left + right
+
+    @staticmethod
+    def softplus_derivative(x: np.ndarray) -> np.ndarray:
+        """Derivative of the softplus function."""
+        return ActivationFunction.sigmoid(x)
+
+    @staticmethod
+    def selu_derivative(x: np.ndarray, alpha: float = 1.67326, scale: float = 1.0507) -> np.ndarray:
+        """Derivative of the SeLU function."""
+        dx = np.ones_like(x)
+        dx[x <= 0] = alpha * np.exp(x[x <= 0])
+        return scale * dx
+
+    @staticmethod
+    def prelu_derivative(x: np.ndarray, alpha: float = 0.01) -> np.ndarray:
+        """Derivative of the PReLU function."""
+        dx = np.ones_like(x)
+        dx[x < 0] = alpha
+        return dx
+
+    @staticmethod
+    def swish_derivative(x: np.ndarray) -> np.ndarray:
+        """Derivative of the Swish function."""
+        s = ActivationFunction.sigmoid(x)
+        return s + x * s * (1 - s)
+
+    @staticmethod
+    def gaussian_derivative(x: np.ndarray, mu: float = 0, sigma: float = 1) -> np.ndarray:
+        """Derivative of the Gaussian function."""
+        return -((x - mu) / (sigma ** 2)) * ActivationFunction.gaussian(x, mu, sigma)

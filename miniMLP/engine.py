@@ -18,21 +18,22 @@ class MLP:
         self.layers = layers
         self.loss_function = loss_function
         self.optimizer = optimizer
+        self.iteration = 0
 
-    def forward(self, X: np.ndarray) -> np.ndarray:
+    def forward(self, X: np.ndarray, training: bool = True) -> np.ndarray:
         """Forward propagation through all layers."""
         for layer in self.layers:
-            X = layer.forward(X, training=True)  # Enable training flag for dropout, etc.
+            X = layer.forward(X, training=training)
         return X
 
     def backward(self, dA: np.ndarray) -> None:
-        """Backpropagate error through all layers."""
+        """Backpropagate error through all layers and collect gradients."""
         for layer in reversed(self.layers):
-            dA = layer.backward(dA)  # No need for learning_rate here; handled by optimizer
+            dA = layer.backward(dA)
 
     def train(self, X_train: np.ndarray, Y_train: np.ndarray, 
               X_val: np.ndarray = None, Y_val: np.ndarray = None,
-              epochs: int = 100, batch_size: int = 32, learning_rate: float = 0.01,
+              epochs: int = 100, batch_size: int = 32,
               validation: bool = False, verbose: bool = True) -> dict:
         """
         Train the MLP with the given training data.
@@ -44,7 +45,6 @@ class MLP:
             Y_val: Validation labels (targets).
             epochs: Number of training epochs.
             batch_size: Size of mini-batches.
-            learning_rate: Initial learning rate for the optimizer.
             validation: If True, perform validation after each epoch.
             verbose: If True, print the loss at each epoch.
             
@@ -68,7 +68,7 @@ class MLP:
                 Y_batch = Y_train_shuffled[batch * batch_size:(batch + 1) * batch_size]
 
                 # Forward pass
-                Y_pred = self.forward(X_batch)
+                Y_pred = self.forward(X_batch, training=True)
 
                 # Compute the loss
                 loss = self.loss_function.compute_loss(Y_batch, Y_pred)
@@ -79,8 +79,9 @@ class MLP:
                 self.backward(dA)
 
                 # Update weights and biases using the optimizer
+                self.iteration += 1
                 for layer in self.layers:
-                    self.optimizer.update(layer.weights, layer.biases, layer.grads)
+                    self.optimizer.update(layer.weights, layer.biases, layer.grads, t=self.iteration)
 
             # Average loss per batch
             avg_loss = epoch_loss / num_batches

@@ -1,30 +1,47 @@
 import numpy as np
 from typing import Callable, Optional
-from miniMLP.regularizers import L2Regularizer, Dropout
+from miniMLP.activation import ActivationFunction
+from miniMLP.regularizers import L2Regularizer
 
 class Layer:
     """Represents a fully connected layer in the neural network."""
 
-    def __init__(self, input_size: int, output_size: int, activation: Callable, 
-                 regularizer: Optional[L2Regularizer] = None, dropout_rate: float = 0.0):
-        """
-        Initialize the layer with weights, biases, and optional regularization/dropout.
+    def __init__(self, input_size: int, output_size: int, activation: Callable,
+                 activation_derivative: Optional[Callable] = None,
+                 regularizer: Optional[L2Regularizer] = None,
+                 dropout_rate: float = 0.0):
+        """Initialize layer parameters.
         
         Args:
             input_size: Number of input features.
-            output_size: Number of output neurons.
-            activation: Activation function (e.g., sigmoid, relu).
-            regularizer: Optional regularizer to apply (e.g., L2Regularizer).
-            dropout_rate: Dropout rate, default is 0 (no dropout).
+            output_size: Number of neurons in the layer.
+            activation: Activation function to apply.
+            activation_derivative: Optional derivative of the activation
+                function. If ``None`` it is looked up by name in
+                :class:`ActivationFunction`.
+            regularizer: Optional regularizer to apply to the weights.
+            dropout_rate: Probability of dropping a unit during training.
         """
         self.input_size = input_size
         self.output_size = output_size
         self.activation = activation
-        self.weights = np.random.randn(input_size, output_size) * np.sqrt(2. / input_size)
+        if activation_derivative is None:
+            derivative_name = f"{activation.__name__}_derivative"
+            activation_derivative = getattr(ActivationFunction, derivative_name, None)
+            if activation_derivative is None:
+                raise ValueError(f"Derivative for activation {activation.__name__} not implemented")
+        self.activation_derivative = activation_derivative
+
+        # Parameters
+        self.weights = np.random.randn(input_size, output_size) * np.sqrt(2.0 / input_size)
         self.biases = np.zeros((1, output_size))
         self.regularizer = regularizer
         self.dropout_rate = dropout_rate
         self.dropout_mask = None
+        self.input = None
+        self.Z = None
+        self.A = None
+        self.grads = {}
 
     def forward(self, X: np.ndarray, training: bool = True) -> np.ndarray:
         """
@@ -37,54 +54,38 @@ class Layer:
         Returns:
             A: The activation after applying weights, biases, and activation function.
         """
-        Z = np.dot(X, self.weights) + self.biases
-        A = self.activation(Z)
+        self.input = X
+        self.Z = np.dot(X, self.weights) + self.biases
+        self.A = self.activation(self.Z)
 
         # Apply dropout if in training mode
         if training and self.dropout_rate > 0:
-            self.dropout_mask = np.random.binomial(1, 1 - self.dropout_rate, size=A.shape) / (1 - self.dropout_rate)
-            A *= self.dropout_mask
+            self.dropout_mask = np.random.binomial(1, 1 - self.dropout_rate, size=self.A.shape) / (1 - self.dropout_rate)
+            self.A *= self.dropout_mask
 
-        return A
+        return self.A
 
-    def backward(self, dA: np.ndarray, X: np.ndarray, learning_rate: float) -> np.ndarray:
+    def backward(self, dA: np.ndarray) -> np.ndarray:
         """
         Perform backpropagation through the layer.
         
         Args:
-            dA: Gradient of the loss function with respect to the output of this layer.
-            X: Input to this layer (activations from the previous layer or input data).
-            learning_rate: Learning rate for weight updates.
+            dA: Gradient of the loss with respect to the output of this layer.
         
         Returns:
             dA_prev: Gradient of the loss function with respect to the input of this layer (to pass to previous layer).
         """
         # Compute the derivative of the activation function
-        dZ = dA * self.activation_derivative(X)
+        if self.dropout_rate > 0 and self.dropout_mask is not None:
+            dA *= self.dropout_mask
+
+        dZ = dA * self.activation_derivative(self.Z)
 
         # Compute gradients with respect to weights and biases
-        dW = np.dot(X.T, dZ) + (self.regularizer(self.weights) if self.regularizer else 0)
+        dW = np.dot(self.input.T, dZ)
+        if self.regularizer:
+            dW += self.regularizer(self.weights)
         db = np.sum(dZ, axis=0, keepdims=True)
+        self.grads = {'dW': dW, 'db': db}
 
-        # Update weights and biases using gradient descent
-        self.weights -= learning_rate * dW
-        self.biases -= learning_rate * db
-
-        # Backpropagate dropout effect if dropout was applied
-        if self.dropout_rate > 0 and self.dropout_mask is not None:
-            dZ *= self.dropout_mask
-
-        # Return gradient for the previous layer
         return np.dot(dZ, self.weights.T)
-
-    def activation_derivative(self, X: np.ndarray) -> np.ndarray:
-        """
-        Compute the derivative of the activation function.
-        
-        Args:
-            X: Input data for this layer.
-        
-        Returns:
-            Derivative of the activation function with respect to X.
-        """
-        return self.activation(X) * (1 - self.activation(X)) 
