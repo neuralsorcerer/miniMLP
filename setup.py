@@ -5,7 +5,7 @@ with open("README.md", "r") as f:
 
 setuptools.setup(
     name="miniMLP",
-    version="0.1.0",
+    version="0.1.1",
     author="Soumyadip Sarkar",
     author_email="soumyadip@soumyadipsarkar.com",
     description="Implementation of very small scale Neural Network from scratch.",

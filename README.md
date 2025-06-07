@@ -8,9 +8,9 @@ the optimizer to be used, and support for batch training, validation, and differ
 
 To install miniMLP, simply run:
 
-    ```
-    pip install miniMLP
-    ```
+```bash
+pip install miniMLP
+```
 
 ## Dependencies
 
@@ -21,9 +21,9 @@ The code requires the following dependencies:
 
 Install them via pip:
 
-    ```
-    pip install numpy matplotlib
-    ```
+```bash
+pip install numpy matplotlib
+```
 
 ## Features
 
@@ -43,6 +43,7 @@ Install them via pip:
 - **Weight Initialization**: Choose He or Xavier initialization per layer.
 - **Weight Introspection**: Easily get and set model weights.
 - **Class Prediction Helper**: `predict_classes` converts outputs to labels.
+- **Batch Normalization**: Normalize layer inputs for stable training.
 
 ## Example Usage
 
@@ -51,82 +52,84 @@ Install them via pip:
 Create an instance of the **`MLP`** class by specifying the input size, output size, hidden layers, the number of neurons in each layer,
 activation functions, and optimizer:
 
-    ```python
-    import numpy as np
-    from miniMLP.engine import MLP
-    from miniMLP.activation import ActivationFunction
-    from miniMLP.optimizers import Adam
-    from miniMLP.losses import MSE
-    from miniMLP.layers import Layer
+```python
+import numpy as np
+from miniMLP.engine import MLP
+from miniMLP.activation import ActivationFunction
+from miniMLP.optimizers import Adam
+from miniMLP.losses import MSE
+from miniMLP.layers import Layer, BatchNormalization
 
-    # Example MLP Architecture
-    layers = [
-        Layer(input_size=2, output_size=4, activation=ActivationFunction.relu),
-        Layer(input_size=4, output_size=6, activation=ActivationFunction.relu, init='xavier'),
-        Layer(input_size=6, output_size=1, activation=ActivationFunction.sigmoid)
-    ]
+# Example MLP Architecture
+layers = [
+    Layer(input_size=2, output_size=4, activation=ActivationFunction.relu),
+    Layer(input_size=4, output_size=6, activation=ActivationFunction.relu, init='xavier'),
+    BatchNormalization(4),
+    Layer(input_size=6, output_size=1, activation=ActivationFunction.sigmoid)
+]
 
-    # Define loss function and optimizer
-    loss_fn = MSE()
-    optimizer = Adam(learning_rate=0.001)
+# Define loss function and optimizer
+loss_fn = MSE()
+optimizer = Adam(learning_rate=0.001)
 
-    # Initialize MLP
-    mlp = MLP(layers=layers, loss_function=loss_fn, optimizer=optimizer)
+# Initialize MLP
+mlp = MLP(layers=layers, loss_function=loss_fn, optimizer=optimizer)
 
-    # Display model architecture
-    mlp.summary()
-    ```
+# Display model architecture
+mlp.summary()
+```
 
 ### Training the MLP
 
 Use the **`train`** method to train the MLP, specifying the training data, validation data, learning rate,
 number of epochs, batch size, and more.
 
-    ```python
-    X_train = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
-    y_train = np.array([[0], [1], [1], [0]])
+```python
+X_train = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
+y_train = np.array([[0], [1], [1], [0]])
 
-    def scheduler(epoch):
-        return 0.001 * (0.95 ** epoch)
+from miniMLP.schedulers import StepLR
 
-    # Train the model
-    mlp.train(
-        X_train, y_train,
-        epochs=2000, batch_size=4,
-        validation=False,
-        lr_scheduler=scheduler,
-        early_stopping=True,
-        patience=20,
-        clip_value=1.0,
-    )
-    ```
+scheduler = StepLR(initial_lr=0.001, step_size=1000, gamma=0.95)
+
+# Train the model
+mlp.train(
+    X_train, y_train,
+    epochs=2000, batch_size=4,
+    validation=False,
+    lr_scheduler=scheduler,
+    early_stopping=True,
+    patience=20,
+    clip_value=1.0,
+)
+```
 
 ### Making Predictions
 
 After training, use the **`predict`** method to generate predictions for new data:
 
-    ```python
-    X_new = np.array([[1, 1], [0, 0]])
-    y_pred = mlp.predict(X_new)
-    print(y_pred)
-    y_labels = mlp.predict_classes(X_new)
-    print(y_labels)
-    ```
+```python
+X_new = np.array([[1, 1], [0, 0]])
+y_pred = mlp.predict(X_new)
+print(y_pred)
+y_labels = mlp.predict_classes(X_new)
+print(y_labels)
+```
 
 ### Evaluating, Saving, and Loading
 
-    ```python
-    # Evaluate on a dataset
-    loss, acc = mlp.evaluate(X_train, y_train)
-    print("Loss", loss, "Accuracy", acc)
+```python
+# Evaluate on a dataset
+loss, acc = mlp.evaluate(X_train, y_train)
+print("Loss", loss, "Accuracy", acc)
 
-    # Save and later load the weights
-    mlp.save("model.pkl")
-    mlp.load("model.pkl")
-    # Access raw weights
-    weights = mlp.get_weights()
-    mlp.set_weights(weights)
-    ```
+# Save and later load the weights
+mlp.save("model.pkl")
+mlp.load("model.pkl")
+# Access raw weights
+weights = mlp.get_weights()
+mlp.set_weights(weights)
+```
 
 ## Activation Functions
 
@@ -177,12 +180,12 @@ Supported loss functions include:
 
 You can also pass validation data to track model performance:
 
-    ```python
-    X_val = np.array([[1, 1], [0, 1]])
-    y_val = np.array([[0], [1]])
+```python
+X_val = np.array([[1, 1], [0, 1]])
+y_val = np.array([[0], [1]])
 
-    history = mlp.train(X_train, y_train, X_val=X_val, Y_val=y_val, epochs=2000, batch_size=4, validation=True)
-    ```
+history = mlp.train(X_train, y_train, X_val=X_val, Y_val=y_val, epochs=2000, batch_size=4, validation=True)
+```
 
 This will output the training loss and validation loss for each epoch.
 
@@ -190,17 +193,17 @@ This will output the training loss and validation loss for each epoch.
 
 If you track loss history during training, you can plot it using `matplotlib`:
 
-    ```python
-    import matplotlib.pyplot as plt
+```python
+import matplotlib.pyplot as plt
 
-    plt.plot(history['train_loss'], label='Training Loss')
-    plt.plot(history['val_loss'], label='Validation Loss')
-    plt.xlabel('Epochs')
-    plt.ylabel('Loss')
-    plt.title('Training and Validation Loss')
-    plt.legend()
-    plt.show()
-    ```
+plt.plot(history['train_loss'], label='Training Loss')
+plt.plot(history['val_loss'], label='Validation Loss')
+plt.xlabel('Epochs')
+plt.ylabel('Loss')
+plt.title('Training and Validation Loss')
+plt.legend()
+plt.show()
+```
 
 ## License
 

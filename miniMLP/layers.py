@@ -51,6 +51,10 @@ class Layer:
         self.A = None
         self.grads = {}
 
+    def param_count(self) -> int:
+        """Return the number of trainable parameters in this layer."""
+        return self.input_size * self.output_size + self.output_size
+
     def forward(self, X: np.ndarray, training: bool = True) -> np.ndarray:
         """
         Perform forward propagation through the layer.
@@ -97,3 +101,57 @@ class Layer:
         self.grads = {'dW': dW, 'db': db}
 
         return np.dot(dZ, self.weights.T)
+
+
+class BatchNormalization:
+    """Batch Normalization layer."""
+
+    def __init__(self, input_size: int, momentum: float = 0.9, epsilon: float = 1e-5):
+        self.input_size = input_size
+        self.output_size = input_size
+        self.momentum = momentum
+        self.epsilon = epsilon
+
+        self.gamma = np.ones((1, input_size))
+        self.beta = np.zeros((1, input_size))
+        # Alias for optimizer compatibility
+        self.weights = self.gamma
+        self.biases = self.beta
+
+        self.running_mean = np.zeros((1, input_size))
+        self.running_var = np.ones((1, input_size))
+
+        self.cache = None
+        self.grads = {}
+
+    def forward(self, X: np.ndarray, training: bool = True) -> np.ndarray:
+        if training:
+            batch_mean = X.mean(axis=0, keepdims=True)
+            batch_var = X.var(axis=0, keepdims=True)
+            self.running_mean = self.momentum * self.running_mean + (1 - self.momentum) * batch_mean
+            self.running_var = self.momentum * self.running_var + (1 - self.momentum) * batch_var
+            X_norm = (X - batch_mean) / np.sqrt(batch_var + self.epsilon)
+            self.cache = (X, batch_mean, batch_var, X_norm)
+        else:
+            X_norm = (X - self.running_mean) / np.sqrt(self.running_var + self.epsilon)
+        out = self.gamma * X_norm + self.beta
+        return out
+
+    def backward(self, dY: np.ndarray) -> np.ndarray:
+        X, mean, var, X_norm = self.cache
+        m = X.shape[0]
+        std_inv = 1.0 / np.sqrt(var + self.epsilon)
+
+        dgamma = np.sum(dY * X_norm, axis=0, keepdims=True)
+        dbeta = np.sum(dY, axis=0, keepdims=True)
+
+        dX_norm = dY * self.gamma
+        dvar = np.sum(dX_norm * (X - mean) * -0.5 * std_inv**3, axis=0, keepdims=True)
+        dmean = np.sum(dX_norm * -std_inv, axis=0, keepdims=True) + dvar * np.mean(-2.0 * (X - mean), axis=0, keepdims=True)
+        dX = dX_norm * std_inv + dvar * 2.0 * (X - mean) / m + dmean / m
+
+        self.grads = {'dW': dgamma, 'db': dbeta}
+        return dX
+
+    def param_count(self) -> int:
+        return 2 * self.input_size

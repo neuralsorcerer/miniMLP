@@ -2,6 +2,7 @@ import numpy as np
 from miniMLP.layers import Layer
 from miniMLP.activation import ActivationFunction
 from miniMLP.regularizers import L2Regularizer
+from miniMLP.layers import BatchNormalization
 
 
 def test_forward_backward_shapes():
@@ -17,6 +18,7 @@ def test_forward_backward_shapes():
 
 def test_dropout():
     layer = Layer(2, 2, ActivationFunction.relu, dropout_rate=0.5)
+    layer.weights[:] = 1.0  # ensure positive activations so dropout has effect
     X = np.ones((4, 2))
     out_train = layer.forward(X, training=True)
     # dropout should create zeros in output and store mask
@@ -43,3 +45,22 @@ def test_xavier_init_variance():
     var = np.var(layer.weights)
     expected = 1.0 / (4 + 2)
     assert abs(var - expected) < expected
+
+
+def test_batchnorm_forward_backward():
+    bn = BatchNormalization(3)
+    X = np.random.randn(5, 3)
+    out = bn.forward(X, training=True)
+    assert out.shape == (5, 3)
+    dY = np.random.randn(5, 3)
+    dX = bn.backward(dY)
+    assert dX.shape == (5, 3)
+    assert 'dW' in bn.grads and 'db' in bn.grads
+
+
+def test_batchnorm_running_stats():
+    bn = BatchNormalization(2, momentum=0.5)
+    X = np.array([[1.0, 2.0], [3.0, 4.0]])
+    bn.forward(X, training=True)
+    expected = X.mean(axis=0, keepdims=True) * 0.5
+    assert np.allclose(bn.running_mean, expected)
